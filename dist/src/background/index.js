@@ -1,0 +1,1 @@
+(function(){"use strict";console.log("Background service worker loaded"),chrome.runtime.onMessage.addListener((e,o,r)=>{var n;switch(console.log("Received message:",e),e.type){case"EXECUTE_ACTION":return chrome.tabs.sendMessage((n=o.tab)==null?void 0:n.id,e,t=>{r(t)}),!0;default:return console.warn("Unknown message type:",e.type),!1}})})();

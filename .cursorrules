@@ -1,0 +1,14 @@
+# Project Rules & Constraints
+
+## Code Organization
+- No file > 500 lines; split modules as needed
+
+## Security
+- All credentials encrypted; no hard-coded secrets
+
+## DSL Validation
+- Schema-validate DSL before execution
+- Freeform JS only in `jsHatch` fields
+
+## User Interaction
+- Ask user on any manual challenge (CAPTCHA, MFA) 
