@@ -11,6 +11,15 @@
 - [x] Add placeholder icons
 - [x] Set up message passing between background and content scripts
 - [x] Create basic popup UI
+- [x] **Configured Multi-Part Build & Options Page:**
+  - [x] Diagnosed and resolved multiple Vite build errors (entry point resolution, path issues).
+  - [x] Created separate Vite config (`vite.options.config.ts`) for options page.
+  - [x] Implemented `postbuild` script workaround (`mv` + `sed`) to ensure correct file paths in `dist`.
+  - [x] Created options page (`src/options/`) HTML and TS.
+  - [x] Added functionality to save/restore OpenAI API key using `chrome.storage.local`.
+  - [x] Debugged options page script loading and save functionality.
+  - [x] Updated `tsconfig.json` and `.gitignore`.
+  - [x] Verified API key saving/loading from options page and service worker.
 
 ## Current Status
 - Extension builds successfully

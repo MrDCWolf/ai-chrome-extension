@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import 'web-streams-polyfill'; // Use main entry point
+import 'web-streams-polyfill/dist/polyfill.js'; // Add polyfill for ReadableStream etc.
 import { TextEncoder, TextDecoder } from 'util';
 
 // Polyfill TextEncoder/TextDecoder for Jest environment (needed by LangChain/dependencies)
