@@ -1,31 +1,9 @@
 import '@testing-library/jest-dom';
-import { jest } from '@jest/globals';
 
-// Mock document and window for tests
-Object.defineProperty(window, 'document', {
-    value: {
-        ...window.document,
-        addEventListener: jest.fn(),
-    },
-    writable: true,
-});
+// No need to manually mock window or document when using testEnvironment: 'jsdom'
+// jsdom provides these globals automatically.
 
-// Add any global test setup here
-Object.defineProperty(global, 'document', {
-    value: {
-        querySelector: jest.fn(),
-    },
-    writable: true,
-});
+// Add any other global test setup here if needed
 
-Object.defineProperty(global, 'window', {
-    value: {
-        location: {
-            href: '',
-        },
-    },
-    writable: true,
-});
-
-// Mock querySelector
-document.querySelector = jest.fn(); 
+// Example: If you need to mock specific browser APIs not provided by jsdom
+// Object.defineProperty(window, 'localStorage', { value: mockLocalStorage }); 
