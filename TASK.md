@@ -29,9 +29,9 @@
 
 ## Testing Status
 - [x] Build process works
-- [ ] Manual testing of content script functions
+- [x] Manual testing of content script functions
 - [ ] Integration testing
-- [ ] Unit testing
+- [x] Unit testing (click, type, navigate)
 
 ## Notes
 - Content script functions implemented as per requirements
@@ -42,16 +42,17 @@
 # Task Backlog & Milestones
 
 ## 🛠️ Phase 1: Scaffold & Core APIs  
-- [ ] Set up repo skeleton: MV3 manifest, TS, React/Vite  
-- [ ] Configure GitHub Actions (build, lint, test)  
-- [ ] Implement content-script helpers:  
-  - `click(selector)`  
-  - `type(selector, text)`  
-  - `navigate(url)`  
-- [ ] Write unit tests for each helper  
+- [x] Set up repo skeleton: MV3 manifest, TS, React/Vite  
+- [x] Configure GitHub Actions (build, lint, test)  
+- [x] Implement content-script helpers:  
+  - [x] `click(selector)`  
+  - [x] `type(selector, text)`  
+  - [x] `navigate(url)`  
+- [x] Write unit tests for each helper  
 
 ## 🔗 Phase 2: LLM Integration & Intent→Plan  
-- [ ] Create `LLMClient` wrapper (LangChain + OpenAI SDK)  
+- [x] Create `LLMClient` wrapper (LangChain + OpenAI SDK)  
+- [x] Unit test `LLMClient` constructor and `ask` method
 - [ ] Build `parseIntent(prompt)` → action list via GPT-4.1 nano  
 - [ ] Unit test: simple NL → JSON action  
 
