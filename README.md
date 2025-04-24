@@ -1,57 +1,67 @@
-# AI Chrome Automation Extension
+# AI Chrome Extension
 
-A Chrome Extension that turns natural-language prompts into reliable, multi-step web automations.
+A Chrome extension that enhances browsing experience with AI-powered features.
 
 ## Features
 
-- Natural language to automation workflow conversion
-- Content script helpers for common web actions
-- React-based popup UI
-- TypeScript for type safety
-- Vite for fast development and building
+- AI-powered content analysis
+- Context-aware suggestions
+- Seamless browser integration
+- Modern React-based UI
 
 ## Development Setup
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+### Prerequisites
 
-2. Start development server:
-   ```bash
-   npm run dev
-   ```
+- Node.js (v18 or higher)
+- npm or yarn
+- Chrome browser
 
-3. Load the extension in Chrome:
-   - Open Chrome and navigate to `chrome://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked"
-   - Select the `dist` directory
+### Installation
 
-## Building for Production
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd ai-chrome-extension
+```
 
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Build the extension:
 ```bash
 npm run build
 ```
 
-The built extension will be in the `dist` directory.
+4. Load the extension in Chrome:
+- Open Chrome and navigate to `chrome://extensions/`
+- Enable "Developer mode"
+- Click "Load unpacked"
+- Select the `dist` directory from the project
+
+### Development
+
+- Start development server:
+```bash
+npm run dev
+```
+
+- Build for production:
+```bash
+npm run build
+```
 
 ## Project Structure
 
 ```
 src/
-  ├── background/    # Background service worker
-  ├── content/       # Content scripts
-  ├── popup/         # Popup UI
-  └── utils/         # Shared utilities
+├── background/     # Background scripts
+├── content/       # Content scripts
+├── popup/         # Popup UI components
+└── utils/         # Shared utilities
 ```
-
-## Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run lint` - Run ESLint
-- `npm run test` - Run tests
 
 ## Contributing
 
@@ -59,4 +69,8 @@ src/
 2. Create a feature branch
 3. Commit your changes
 4. Push to the branch
-5. Create a Pull Request 
+5. Create a Pull Request
+
+## License
+
+MIT License - see LICENSE file for details 
