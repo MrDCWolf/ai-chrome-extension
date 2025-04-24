@@ -1,34 +1,17 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import ReactDOM from 'react-dom/client';
 
-const Popup: React.FC = () => {
+function Popup() {
   return (
-    <div style={{ width: '300px', padding: '16px' }}>
+    <div style={{ padding: '20px', width: '300px' }}>
       <h1>AI Chrome Automation</h1>
-      <p>Enter your automation prompt below:</p>
-      <textarea
-        style={{ width: '100%', height: '100px', marginBottom: '8px' }}
-        placeholder="Describe what you want to automate..."
-      />
-      <button
-        style={{
-          width: '100%',
-          padding: '8px',
-          backgroundColor: '#4CAF50',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-        }}
-      >
-        Run Automation
-      </button>
+      <p>Ready to automate!</p>
     </div>
   );
-};
+}
 
-const container = document.getElementById('root');
-if (container) {
-  const root = createRoot(container);
-  root.render(<Popup />);
-} 
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <Popup />
+  </React.StrictMode>
+); 

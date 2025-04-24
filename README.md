@@ -57,10 +57,42 @@ npm run build
 
 ```
 src/
-├── background/     # Background scripts
-├── content/       # Content scripts
+├── background/     # Background service worker
+├── content/       # Content scripts for web automation
 ├── popup/         # Popup UI components
 └── utils/         # Shared utilities
+```
+
+## Content Script API
+
+The extension provides three main automation functions:
+
+### click(selector: string): Promise<void>
+Clicks an element matching the given selector.
+```javascript
+await chrome.runtime.sendMessage({ 
+  type: 'click', 
+  selector: '#submit-button' 
+});
+```
+
+### type(selector: string, text: string): Promise<void>
+Types text into an input element.
+```javascript
+await chrome.runtime.sendMessage({ 
+  type: 'type', 
+  selector: '#search-input',
+  text: 'Hello world'
+});
+```
+
+### navigate(url: string): Promise<void>
+Navigates to the specified URL.
+```javascript
+await chrome.runtime.sendMessage({ 
+  type: 'navigate', 
+  url: 'https://example.com' 
+});
 ```
 
 ## Contributing
@@ -70,6 +102,11 @@ src/
 3. Commit your changes
 4. Push to the branch
 5. Create a Pull Request
+
+## Development Status
+
+See [TASK.md](TASK.md) for current development status and pending tasks.
+See [PLANNING.md](PLANNING.md) for development strategy and roadmap.
 
 ## License
 

@@ -1,61 +1,70 @@
-# Chrome Extension Automation Project
+# Chrome Extension Development Plan
 
-## 1. Purpose & Vision
+## Architecture
 
-Build a Chrome MV3 extension that turns natural‑language prompts into reliable, multi‑step web automations via a JSON/YAML DSL.
+### Components
+1. Content Script (`src/content/`)
+   - Handles direct DOM interactions
+   - Implements core automation functions
+   - Communicates with background script
 
-Adaptive Learning: Record successful runs and user "watch mode" demonstrations to optimize future executions.
+2. Background Script (`src/background/`)
+   - Manages extension state
+   - Handles message routing
+   - Coordinates between popup and content scripts
 
-AI‑Driven Code: Use Archon MCP for code generation, refinement, and CI feedback loops.
+3. Popup UI (`src/popup/`)
+   - User interface for controlling automation
+   - React-based interface
+   - Communicates with background script
 
-## 2. Success Criteria
+## Development Workflow
 
-- ≥ 95% first‑pass success rate on core workflows.
-- Automatic skipping of known‑bad selectors based on run history.
-- Auto‑save DSL recipes after 100% successful runs.
-- Valid DSL generated from user "watch & learn" demos.
+### Phase 1: Core Functionality ✅
+- Basic extension setup
+- Content script implementation
+- Message passing system
+- Build process configuration
 
-## 3. Tech Stack
+### Phase 2: Testing & Refinement 🏗️
+- Manual testing of core functions
+- Unit test implementation
+- Integration test setup
+- Error handling improvements
 
-- Extension Platform: Chrome Extension MV3, TypeScript
-- UI Framework: React + Vite (Popup & Options pages)
-- LLM Orchestration: LangChain JS + OpenAI Node SDK (GPT‑4.1 family & o4‑mini)
-- AI‑Coder Backend: Archon MCP Server (Docker v6)
-- Workflow DSL: JSON/YAML declarative schema + optional jsHatch snippets
-- Persistence: chrome.storage for credentials, run history, and recipes
-- Monitoring & Logging: Sentry (extension) + Winston/Bunyan (backend)
-- Testing: Jest (unit) + Playwright (E2E)
-- CI/CD: GitHub Actions → lint, test, build, publish
+### Phase 3: User Experience
+- Enhanced popup UI
+- Better error reporting
+- User feedback system
+- Documentation
 
-## 4. High‑Level Architecture
+### Phase 4: Production Readiness
+- Security review
+- Performance optimization
+- Chrome Web Store preparation
+- Documentation finalization
 
-```
-[Popup UI (React)] ⇄ [Background Service Worker]
-       ↓                       ↓
- [DSL Executor]           [AI‑Coder Client]
-       ↓                       ↓
- [Content Scripts]       [Archon MCP Server]
-```
+## Testing Strategy
 
-- Popup UI: Receive NL prompts and display status.
-- Background Worker: Manage state, credentials, and LLM calls.
-- DSL Executor: Parse & execute DSL steps via content scripts.
-- AI‑Coder Client: Communicate with Archon MCP to generate/refine TS modules.
+### Unit Tests
+- Content script functions
+- Message handling
+- UI components
 
-## 5. Key Components
+### Integration Tests
+- End-to-end automation flows
+- Cross-component communication
+- Error handling scenarios
 
-- Content‑Script API: Core browser actions (click, type, navigate, etc.)
-- Intent Parser: GPT‑4.1 nano → discrete action plan.
-- DSL Engine: Schema validator and executor for JSON/YAML workflows.
-- Session & Auth: Credential vault + 2FA prompt hooks.
-- Retry Learning: Run history store + selector preference logic.
-- Watch & Learn: Capture user events → draft DSL recipes.
-- Plugin System: Site adapters and network interception hooks.
-- Logging & Monitoring: Step logs, screenshots on error, and Sentry integration.
+### Manual Testing
+- Browser compatibility
+- Real-world use cases
+- Edge case handling
 
-## 6. Constraints & Notes
-
-- No file exceeds 500 lines; split into modules when necessary.
-- All credentials must be encrypted; never hard‑code secrets.
-- Validate DSL against schema before execution; freeform JS only in jsHatch.
-- Prompt the user for manual challenges (CAPTCHA, MFA) when encountered. 
+## Future Enhancements
+- Advanced selector support
+- Automation recording
+- Command chaining
+- Custom action definitions
+- State persistence
+- Cross-browser support 
