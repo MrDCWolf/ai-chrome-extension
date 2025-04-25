@@ -1,0 +1,41 @@
+{
+  "steps": [
+    {
+      "action": "navigate",
+      "value": "https://example.com"
+    },
+    {
+      "action": "click",
+      "selector": "#login-button",
+      "condition": {
+        "ifExists": "#login-button"
+      }
+    },
+    {
+      "action": "type",
+      "selector": "input[name='username']",
+      "value": "testuser"
+    },
+    {
+      "action": "type",
+      "selector": "input[name='password']",
+      "value": "testpass",
+      "jsHatch": "console.log('Typing password')"
+    },
+    {
+      "action": "click",
+      "selector": "button[type='submit']"
+    },
+    {
+      "action": "wait", 
+      "value": "500" 
+    },
+    {
+      "action": "log",
+      "value": "Processing item: {{item}}",
+      "loop": {
+        "items": ["apple", "banana", "cherry"]
+      }
+    }
+  ]
+} 

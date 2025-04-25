@@ -1,0 +1,12 @@
+{
+  "steps": [
+    {
+      "selector": "#some-element",
+      "value": "some value" 
+    },
+    {
+      "action": "click",
+      "selector": "button"
+    }
+  ]
+} 

@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Workflow DSL Schema",
+  "description": "Defines the structure for a workflow automation sequence.",
+  "type": "object",
+  "properties": {
+    "steps": {
+      "description": "An array of actions to perform in sequence.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "description": "The type of action to perform (e.g., 'click', 'type', 'navigate').",
+            "type": "string"
+          },
+          "selector": {
+            "description": "A CSS selector to target an element for the action.",
+            "type": "string"
+          },
+          "value": {
+            "description": "A value to use with the action (e.g., text to type, URL to navigate to).",
+            "type": "string"
+          },
+          "loop": {
+            "description": "Defines how this step should be looped.",
+            "type": "object",
+            "oneOf": [
+              { "required": ["times"] },
+              { "required": ["items"] }
+            ],
+            "properties": {
+              "times": {
+                "description": "Number of times to repeat the step.",
+                "type": "integer",
+                "minimum": 1
+              },
+              "items": {
+                "description": "An array of items to iterate over, substituting {{item}} in the step.",
+                "type": "array"
+              }
+            },
+            "additionalProperties": false
+          },
+          "condition": {
+            "description": "Defines a condition under which this step should execute.",
+            "type": "object",
+            "oneOf": [
+              { "required": ["ifExists"] },
+              { "required": ["ifValue"] }
+            ],
+            "properties": {
+              "ifExists": {
+                "description": "Execute step only if an element matching this selector exists.",
+                "type": "string"
+              },
+              "ifValue": {
+                "description": "Execute step only if the element's value matches.",
+                "type": "object",
+                "properties": {
+                  "selector": {
+                    "type": "string"
+                  },
+                  "equals": {
+                    "type": "string"
+                  }
+                },
+                "required": ["selector", "equals"],
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "jsHatch": {
+            "description": "An escape hatch to execute arbitrary JavaScript code.",
+            "type": "string"
+          }
+        },
+        "required": ["action"],
+        "additionalProperties": false
+      },
+      "minItems": 1
+    }
+  },
+  "required": ["steps"],
+  "additionalProperties": false
+} 
