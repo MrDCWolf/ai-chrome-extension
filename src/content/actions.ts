@@ -45,4 +45,18 @@ export async function type(selector: string, text: string): Promise<void> {
  */
 export async function navigate(url: string): Promise<void> {
     window.location.href = url;
+}
+
+/**
+ * Checks if an element exists for the given selector.
+ * @param selector CSS selector for the target element.
+ * @returns True if the element exists, false otherwise.
+ */
+export function checkElementExists(selector: string): boolean {
+  if (!selector) {
+    console.error('checkElementExists called with empty selector.');
+    return false; // Or throw? Returning false might be safer in polling.
+  }
+  const element = document.querySelector(selector);
+  return !!element;
 } 

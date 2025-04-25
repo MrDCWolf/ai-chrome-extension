@@ -1,9 +1,13 @@
 // Background service worker entry point
-console.log('Background service worker loaded and ready');
+import { parseIntent } from '../llm/IntentParser.ts'; // Re-enabled import
+import { Workflow } from '../dsl/parser'; // Re-enabled import
+import { executeWorkflow } from '../dsl/executor.ts'; // Import the executor
+
+console.log('[Background] Service worker script started.'); // Changed log slightly
 
 // Listen for messages from content scripts and popup
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  console.log('Background script received message:', message);
+  console.log('[Background] Received message:', message);
   
   if (message.type === 'EXECUTE_ACTION') {
     console.log('Background script forwarding action:', message.action);
@@ -35,20 +39,56 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     
     return true; // Keep the message channel open for async response
   } else if (message.type === 'RUN_WORKFLOW') {
-    console.log('Received RUN_WORKFLOW command with prompt:', message.prompt);
-    // Placeholder for actual workflow execution logic
-    // For now, just acknowledge receipt
-    sendResponse({ success: true, message: 'Workflow run initiated with prompt.', prompt: message.prompt });
-    return false; // No async response needed for now
+    console.log('[Background] Received RUN_WORKFLOW with prompt:', message.prompt);
+
+    (async () => {
+      let workflow: Workflow | null = null;
+      let tabId: number | null = null;
+
+      try {
+        // 1. Parse the prompt
+        console.log('[Background] Calling parseIntent...');
+        workflow = await parseIntent(message.prompt);
+        console.log('[Background] parseIntent successful! Workflow:', workflow);
+
+        // 2. Get active tab ID
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tabs[0]?.id) {
+          throw new Error('No active tab found to execute workflow on.');
+        }
+        tabId = tabs[0].id;
+        console.log(`[Background] Found active tab ID: ${tabId}`);
+
+        // 3. Execute the workflow
+        console.log(`[Background] Calling executeWorkflow on tab ${tabId}...`);
+        await executeWorkflow(tabId, workflow);
+        console.log(`[Background] executeWorkflow completed successfully on tab ${tabId}.`);
+
+        // Send final success response
+        sendResponse({ success: true, message: 'Workflow executed successfully.' });
+
+      } catch (error) {
+        console.error('[Background] Error during RUN_WORKFLOW:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error during workflow processing.';
+        // Include details about where the error occurred if possible
+        let stage = workflow ? (tabId ? 'execution' : 'getting tab') : 'parsing';
+        sendResponse({ 
+            success: false, 
+            error: `Workflow failed during ${stage}: ${errorMessage}` 
+        });
+      }
+    })();
+
+    return true; // Keep message channel open for async processing
   }
   
-  console.warn('Unknown message type:', message.type);
-  return false;
+  console.warn('[Background] Unknown message type received:', message.type);
+  return false; // Indicate synchronous handling for unknown types
 });
 
 // Extension installed handler
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Extension installed');
+  console.log('[Background] Extension installed/updated.'); // Changed log slightly
 });
 
 // Test function to verify service worker is active

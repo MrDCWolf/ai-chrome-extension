@@ -77,6 +77,13 @@ interface JsHatchStep extends BaseStep {
     selector?: string; // Optional selector/context
 }
 
+// Add interface for waitForElement
+interface WaitForElementStep extends BaseStep {
+    action: 'waitForElement';
+    selector: string;
+    timeout?: number; // Optional timeout, default from schema
+}
+
 // Interfaces for control flow actions
 interface IfStep extends BaseStep {
     action: 'if';
@@ -97,6 +104,7 @@ interface LoopStep extends BaseStep { // Extends BaseStep for optional inline lo
 // Export the specific types along with the union type
 export type {
     LogStep, WaitStep, ClickStep, TypeStep, NavigateStep, JsHatchStep, IfStep, LoopStep,
+    WaitForElementStep, // Export the new type
     BaseStep, ConditionCheck, ConditionDefinition, LoopDefinition // Also export helper types if needed elsewhere
 };
 
@@ -109,7 +117,8 @@ export type Step =
     | NavigateStep
     | JsHatchStep
     | IfStep
-    | LoopStep;
+    | LoopStep
+    | WaitForElementStep; // Add to the union
 
 // Workflow interface using the new Step union type
 export interface Workflow {

@@ -159,6 +159,23 @@
             },
             "required": ["forEach", "do"],
             "additionalProperties": false
+          },
+          {
+            "properties": {
+              "action": { "const": "waitForElement" },
+              "selector": {
+                "description": "CSS selector for the element to wait for.",
+                "type": "string"
+              },
+              "timeout": {
+                 "description": "Maximum time to wait in milliseconds.",
+                 "type": "integer",
+                 "minimum": 0,
+                 "default": 15000
+               }
+            },
+            "required": ["selector"],
+            "additionalProperties": false
           }
         ]
       },

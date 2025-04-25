@@ -1,5 +1,13 @@
 /// <reference types="chrome" />
 
+// Import only the functions defined in actions.ts
+import {
+  click,
+  type,
+  navigate,
+  checkElementExists
+} from './actions';
+
 console.log('[ContentScript] Loaded and ready.');
 
 // --- Define Message Payloads (Mirroring Executor) ---
@@ -19,40 +27,7 @@ interface ExecuteJsHatchPayload {
     code: string;
 }
 
-// --- Helper Functions ---
-
-/** Clicks an element specified by a selector */
-async function clickElement(selector: string): Promise<void> {
-    console.log(`[ContentScript] Clicking element: ${selector}`);
-    const element = document.querySelector(selector);
-    if (element && element instanceof HTMLElement) {
-        element.click();
-    } else {
-        throw new Error(`Element not found or not clickable for selector: ${selector}`);
-    }
-}
-
-/** Types text into an input element specified by a selector */
-async function typeText(selector: string, text: string): Promise<void> {
-    console.log(`[ContentScript] Typing into element: ${selector}`);
-    const element = document.querySelector(selector);
-    if (element && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
-        element.value = text;
-        // Dispatch events to simulate user input if needed by the page
-        element.dispatchEvent(new Event('input', { bubbles: true }));
-        element.dispatchEvent(new Event('change', { bubbles: true }));
-    } else {
-        throw new Error(`Element not found or not an input/textarea for selector: ${selector}`);
-    }
-}
-
-/** Navigates the current page to a new URL */
-async function navigatePage(url: string): Promise<void> {
-    console.log(`[ContentScript] Navigating to: ${url}`);
-    window.location.href = url;
-    // Note: This will cause the content script to reload on the new page.
-    // No further actions in the *current* script execution context will run after navigation.
-}
+// --- Helper Functions (Defined Locally) ---
 
 /** Waits for a specified duration */
 async function wait(durationMs: number): Promise<void> {
@@ -109,18 +84,15 @@ async function executeJsHatch(code: string): Promise<any> {
 }
 
 // --- Message Listener ---
-
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     console.log('[ContentScript] Received message:', request);
 
-    // Validate request structure
-     if (!request || typeof request.type !== 'string') {
-         console.error('[ContentScript] Invalid message structure received:', request);
-         sendResponse({ success: false, error: 'Invalid message structure' });
-         return false; // No async response needed
-     }
+    if (!request || typeof request.type !== 'string') {
+        console.error('[ContentScript] Invalid message structure received:', request);
+        sendResponse({ success: false, error: 'Invalid message structure' });
+        return false; // No async response needed
+    }
 
-    // Use an async IIFE to handle the promise-based actions
     (async () => {
         try {
             switch (request.type) {
@@ -130,33 +102,46 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
                         throw new Error('Invalid EXECUTE_ACTION payload');
                     }
                     const { action, selector, value } = payload;
+                    let promise: Promise<any>;
+
                     switch (action) {
                         case 'click':
                             if (!selector) throw new Error('Missing selector for click action');
-                            await clickElement(selector);
+                            promise = click(selector);
                             break;
                         case 'type':
                             if (!selector || typeof value === 'undefined') throw new Error('Missing selector or value for type action');
-                            await typeText(selector, value);
+                            promise = type(selector, value);
                             break;
                         case 'navigate':
                             if (typeof value === 'undefined') throw new Error('Missing value (URL) for navigate action');
-                            await navigatePage(value);
-                            // Script halts here due to navigation, sendResponse might not happen
-                            // It's okay for navigate, executor shouldn't necessarily expect a response.
+                            promise = navigate(value);
                             return; // Exit IIFE early
                         case 'wait':
-                             const duration = parseInt(value || '0', 10);
-                             if (isNaN(duration) || duration < 0) throw new Error('Invalid duration for wait action');
-                             await wait(duration);
-                             break;
+                            const duration = parseInt(value || '0', 10);
+                            if (isNaN(duration) || duration < 0) throw new Error('Invalid duration for wait action');
+                            promise = wait(duration);
+                            break;
                         case 'log':
-                            console.log('[Workflow Log]:', value); // Log action
+                            console.log('[Workflow Log]:', value);
+                            promise = Promise.resolve({ success: true });
                             break;
                         default:
                             throw new Error(`Unknown action: ${action}`);
                     }
-                    sendResponse({ success: true });
+
+                    promise
+                        .then(result => {
+                            console.log(`Action '${action}' result:`, result);
+                            const responsePayload = (typeof result === 'object' && result !== null && 'success' in result) 
+                                                    ? result 
+                                                    : { success: true, data: result }; 
+                            sendResponse(responsePayload);
+                        })
+                        .catch(error => {
+                            console.error(`Error executing action '${action}':`, error);
+                            sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+                        });
                     break;
                 }
                 case 'CHECK_CONDITION': {
@@ -176,6 +161,18 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
                     const result = await executeJsHatch(payload.code);
                     sendResponse({ success: true, data: result });
                     break;
+                }
+                case 'CHECK_ELEMENT': {
+                    const { selector } = request.payload;
+                    try {
+                        const exists = checkElementExists(selector);
+                        console.log(`[Content Script] CHECK_ELEMENT for '${selector}': ${exists}`);
+                        sendResponse({ success: true, exists: exists });
+                    } catch (error) {
+                        console.error(`[Content Script] Error in CHECK_ELEMENT for '${selector}':`, error);
+                        sendResponse({ success: false, error: error instanceof Error ? error.message : String(error) });
+                    }
+                    return false; // Synchronous response for check
                 }
                 default:
                     console.warn('[ContentScript] Unknown message type:', request.type);

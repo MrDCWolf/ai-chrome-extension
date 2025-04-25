@@ -1,7 +1,7 @@
 // src/dsl/executor.ts
 /// <reference types="chrome" />
 
-import { Workflow, Step, IfStep, LoopStep, JsHatchStep } from './parser'; // Assuming parser exports these types
+import { Workflow, Step, IfStep, LoopStep, JsHatchStep, NavigateStep, WaitForElementStep } from './parser'; // Assuming parser exports these types
 import path from 'path';
 
 // Define message types for communication with content script
@@ -39,7 +39,15 @@ interface ExecuteJsHatchMessage extends BaseMessage {
     payload: ExecuteJsHatchPayload;
 }
 
-type ContentScriptRequest = ExecuteActionMessage | CheckConditionMessage | ExecuteJsHatchMessage;
+interface CheckElementPayload {
+    selector: string;
+}
+interface CheckElementMessage extends BaseMessage {
+    type: 'CHECK_ELEMENT';
+    payload: CheckElementPayload;
+}
+
+type ContentScriptRequest = ExecuteActionMessage | CheckConditionMessage | ExecuteJsHatchMessage | CheckElementMessage;
 
 // Response types (adjust based on actual content script implementation)
 interface BaseResponse {
@@ -114,6 +122,78 @@ function substituteVariables(text: string | undefined, context: ExecutionContext
 }
 
 /**
+ * Waits for a specific tab to finish loading.
+ * @param tabId The ID of the tab to wait for.
+ * @param timeoutMs Maximum time to wait in milliseconds.
+ * @returns A promise that resolves when the tab status is 'complete'.
+ */
+function waitForTabLoad(tabId: number, timeoutMs: number = 15000): Promise<void> {
+    console.log(`[Executor] Waiting up to ${timeoutMs}ms for tab ${tabId} to complete loading...`);
+    return new Promise((resolve, reject) => {
+        let listener: ((updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo, tab: chrome.tabs.Tab) => void) | null = null;
+        let removedListener: ((removedTabId: number) => void) | null = null;
+        let timeoutId: NodeJS.Timeout | null = null;
+
+        const cleanup = () => {
+            if (listener) {
+                chrome.tabs.onUpdated.removeListener(listener);
+                listener = null;
+            }
+             if (removedListener) {
+                chrome.tabs.onRemoved.removeListener(removedListener);
+                removedListener = null;
+            }
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+        };
+
+        timeoutId = setTimeout(() => {
+            cleanup();
+            console.error(`[Executor] Timeout waiting for tab ${tabId} to load.`);
+            reject(new Error(`Timeout waiting for tab ${tabId} to complete loading.`));
+        }, timeoutMs);
+
+        listener = (updatedTabId, changeInfo) => {
+            // Wait specifically for the 'complete' status
+            if (updatedTabId === tabId && changeInfo.status === 'complete') {
+                console.log(`[Executor] Tab ${tabId} reported status 'complete'.`);
+                cleanup();
+                // Add a small safety delay to ensure content script is likely ready
+                setTimeout(resolve, 100); 
+            }
+        };
+
+        removedListener = (removedTabId) => {
+            if (removedTabId === tabId) {
+                cleanup();
+                 console.error(`[Executor] Tab ${tabId} was closed before loading completed.`);
+                reject(new Error(`Tab ${tabId} was closed before loading completed.`));
+            }
+        };
+
+        // Check initial state *after* adding listeners, in case it loaded extremely fast
+        chrome.tabs.get(tabId, (tab) => {
+             if (chrome.runtime.lastError) {
+                 // Tab might have closed even before we added the removed listener
+                  cleanup();
+                  reject(new Error(`Failed to get tab ${tabId} state: ${chrome.runtime.lastError.message}`));
+             } else if (tab && tab.status === 'complete') {
+                  console.log(`[Executor] Tab ${tabId} was already complete when checking.`);
+                  cleanup();
+                  // Add a small safety delay
+                   setTimeout(resolve, 100); 
+             } else {
+                 // Only add listeners if not already complete/error
+                 chrome.tabs.onUpdated.addListener(listener!);
+                 chrome.tabs.onRemoved.addListener(removedListener!);
+             }
+        });
+    });
+}
+
+/**
  * Recursively executes a sequence of workflow steps.
  * @param tabId The ID of the target tab.
  * @param steps The array of Step objects to execute.
@@ -132,11 +212,78 @@ async function executeWorkflowSteps(tabId: number, steps: Step[], context: Execu
 
         try {
             switch (step.action) {
+                case 'navigate':
+                    // Handle navigate directly using chrome.tabs.update
+                    const navigateStep = step as NavigateStep;
+                    if (typeof navigateStep.value !== 'string' || !navigateStep.value) {
+                        throw new Error(`Action 'navigate' requires a non-empty string 'value' (URL).`);
+                    }
+                    const targetUrl = substituteVariables(navigateStep.value, context);
+                    if (!targetUrl) {
+                        throw new Error(`Action 'navigate' resulted in an empty URL after variable substitution.`);
+                    }
+                    console.log(`[Executor] Executing action "navigate" to URL: ${targetUrl}`);
+                    await chrome.tabs.update(tabId, { url: targetUrl });
+                    console.log(`[Executor] Action "navigate" to ${targetUrl} initiated. Waiting for tab load...`);
+                    // Wait for the tab to report 'complete' status
+                    try {
+                        await waitForTabLoad(tabId); 
+                        console.log(`[Executor] Tab ${tabId} finished loading after navigation.`);
+                    } catch (waitError) {
+                         console.error(`[Executor] Error waiting for tab ${tabId} to load after navigation:`, waitError);
+                         // Re-throw error to stop workflow execution
+                         throw new Error(`Navigation to ${targetUrl} initiated, but failed while waiting for page load: ${waitError instanceof Error ? waitError.message : String(waitError)}`);
+                    }
+                    break;
+
+                case 'waitForElement':
+                    const waitStep = step as WaitForElementStep;
+                    const waitSelector = substituteVariables(waitStep.selector, context);
+                    if (!waitSelector) {
+                        throw new Error(`Action 'waitForElement' requires a non-empty 'selector'.`);
+                    }
+                    const timeout = waitStep.timeout ?? 15000; // Use default from schema if not provided
+                    console.log(`[Executor] Executing "waitForElement" for selector "${waitSelector}" (timeout: ${timeout}ms)`);
+
+                    // Add a small initial delay before starting checks
+                    await new Promise(resolve => setTimeout(resolve, 250)); 
+
+                    const startTime = Date.now();
+                    let elementFound = false;
+                    while (Date.now() - startTime < timeout) {
+                        try {
+                            const checkMsg: CheckElementMessage = { 
+                                type: 'CHECK_ELEMENT', 
+                                payload: { selector: waitSelector } 
+                            };
+                            const response = await sendMessageToContentScript<{ success: boolean, exists: boolean }>(tabId, checkMsg);
+                            if (response.exists) {
+                                elementFound = true;
+                                console.log(`[Executor] Element "${waitSelector}" found.`);
+                                break; // Exit the while loop
+                            }
+                        } catch (error) {
+                            // Ignore "failed to communicate" errors briefly after navigation, retry
+                            if (error instanceof Error && error.message.includes('Failed to communicate')) {
+                                console.warn(`[Executor] Communication error checking for element "${waitSelector}" (possibly temporary after nav), retrying...`);
+                            } else {
+                                // Rethrow other errors immediately
+                                throw error;
+                            }
+                        }
+                        // Wait before next check
+                        await new Promise(resolve => setTimeout(resolve, 500)); 
+                    }
+
+                    if (!elementFound) {
+                        throw new Error(`Timeout waiting for element "${waitSelector}" after ${timeout}ms.`);
+                    }
+                    break;
+
                 case 'log':
                 case 'wait':
                 case 'click':
                 case 'type':
-                case 'navigate':
                     // Simple actions
                     let actionSelector: string | undefined = undefined;
                     let actionValue: string | number | undefined = undefined; // Allow number for wait
@@ -158,10 +305,10 @@ async function executeWorkflowSteps(tabId: number, steps: Step[], context: Execu
                     if ((step.action === 'click' || step.action === 'type') && !actionSelector) {
                         throw new Error(`Action '${step.action}' requires a 'selector'.`);
                     }
-                    if ((step.action === 'type' || step.action === 'navigate' || step.action === 'log') && typeof actionValue === 'undefined') {
+                    if ((step.action === 'type' || step.action === 'log') && typeof actionValue === 'undefined') {
                          throw new Error(`Action '${step.action}' requires a 'value'.`);
                     }
-                     if (step.action === 'wait' && typeof actionValue !== 'number') { // Check actionValue type now
+                     if (step.action === 'wait' && typeof actionValue !== 'number') {
                         throw new Error(`Action 'wait' requires a numeric 'value' (milliseconds).`);
                      }
 

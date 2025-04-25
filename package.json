@@ -14,7 +14,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "icons": "node scripts/create-icons.cjs",
-    "prebuild": "npm run icons",
+    "compile-schema": "node scripts/compile-validator.mjs",
+    "prebuild": "npm run compile-schema && npm run icons",
     "postbuild": "mv -f dist/options/src/options/index.html dist/options/options.html && rm -rf dist/options/src && sed -i '' 's|src=\"/assets/options.js\"|src=\"assets/options.js\"|g' dist/options/options.html || true"
   },
   "dependencies": {
@@ -38,6 +39,7 @@
     "@vitejs/plugin-react": "^4.0.0",
     "ajv": "^8.17.1",
     "ajv-cli": "^5.0.0",
+    "ajv-formats": "^3.0.1",
     "babel-jest": "^29.7.0",
     "dotenv": "^16.5.0",
     "eslint": "^8.45.0",
