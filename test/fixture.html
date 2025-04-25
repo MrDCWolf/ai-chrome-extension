@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSL Executor Test Fixture</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        label { display: block; margin-bottom: 5px; }
+        input, button { padding: 8px; margin-bottom: 10px; }
+        #logArea { height: 100px; width: 90%; border: 1px solid #eee; overflow-y: scroll; background-color: #f9f9f9; padding: 5px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>DSL Executor Test Fixture</h1>
+
+    <div class="section" id="section1">
+        <h2>Section 1: Basic Actions</h2>
+        <label for="input1">Input 1:</label>
+        <input type="text" id="input1" name="input1">
+        <button id="button1">Button 1</button>
+        <div id="output1">Status: Waiting</div>
+    </div>
+
+    <div class="section" id="section2">
+        <h2>Section 2: Conditions</h2>
+        <label for="input2">Input 2 (Type 'proceed'):</label>
+        <input type="text" id="input2" name="input2">
+        <button id="button2">Button 2 (Click if Input 2 is 'proceed')</button>
+        <div id="output2" style="display: none;">Conditional Action Triggered!</div>
+    </div>
+
+    <div class="section" id="section3">
+        <h2>Section 3: Loops</h2>
+        <ul id="loopList"></ul>
+        <button id="button3">Button 3 (Loop Test)</button> 
+    </div>
+
+    <div class="section" id="section4">
+        <h2>Section 4: JS Hatch</h2>
+        <div id="output4">JS Hatch Status: Pending</div>
+        <span id="dataAttributeTarget" data-test="initial">Data Target</span>
+    </div>
+
+     <div class="section" id="section5">
+        <h2>Section 5: Navigation Target</h2>
+        <p>Workflow might navigate here.</p>
+    </div>
+
+    <script>
+        // Simple logging for button clicks
+        document.getElementById('button1').addEventListener('click', () => {
+            document.getElementById('output1').textContent = 'Status: Button 1 Clicked!';
+        });
+        document.getElementById('button2').addEventListener('click', () => {
+            document.getElementById('output2').style.display = 'block';
+        });
+        // Allow global access for jsHatch testing
+        window.myFixtureFunction = (value) => {
+             document.getElementById('output4').textContent = `JS Hatch Status: Function called with ${value}`;
+             return { success: true, valueReceived: value };
+        }
+    </script>
+
+</body>
+</html> 

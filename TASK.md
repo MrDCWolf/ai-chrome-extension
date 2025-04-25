@@ -66,8 +66,8 @@
 - [ ] Unit test: simple NL → JSON action  
 
 ## 📝 Phase 3: JSON/YAML DSL Engine  
-- [ ] Define DSL JSON Schema (steps, loops, conditionals, `jsHatch`)  
-- [ ] Integrate YAML parser + schema validator  
+- [x] Define DSL JSON Schema (steps, loops, conditionals, `jsHatch`)  
+- [x] Integrate YAML parser + schema validator  
 - [ ] Implement DSL executor to call content-script APIs  
 - [ ] End-to-end test: sample DSL runs on a demo page  
 

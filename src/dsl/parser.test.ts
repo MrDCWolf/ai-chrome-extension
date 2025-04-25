@@ -1,4 +1,4 @@
-import { loadDslFromYaml } from './parser';
+import { loadDslFromYaml, ClickStep } from './parser';
 
 // Sample valid YAML
 const validYaml = `
@@ -7,8 +7,6 @@ steps:
     value: "https://example.com"
   - action: click
     selector: "#login"
-    condition:
-      ifExists: "#login"
 `;
 
 // Sample YAML with syntax error (incorrect indentation)
@@ -38,7 +36,6 @@ describe('loadDslFromYaml', () => {
         expect(workflow.steps.length).toBe(2);
         expect(workflow.steps[0].action).toBe('navigate');
         expect(workflow.steps[1].action).toBe('click');
-        expect(workflow.steps[1].condition?.ifExists).toBe('#login');
     });
 
     it('should throw an error for malformed YAML', () => {
@@ -54,7 +51,7 @@ describe('loadDslFromYaml', () => {
         // Check for specific error message if desired
         expect(() => {
             loadDslFromYaml(schemaViolationYaml);
-        }).toThrow(/must have required property 'action'/);
+        }).toThrow(/must match exactly one schema in oneOf/);
         // Check the error path
         expect(() => {
             loadDslFromYaml(schemaViolationYaml);

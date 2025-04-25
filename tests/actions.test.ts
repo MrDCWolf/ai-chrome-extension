@@ -1,3 +1,5 @@
+/** @jest-environment jsdom */
+
 import { click, type, navigate } from '../src/content/actions';
 
 describe('content actions', () => {

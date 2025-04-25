@@ -4,84 +4,229 @@
   "description": "Defines the structure for a workflow automation sequence.",
   "type": "object",
   "properties": {
+    "name": {
+      "description": "An optional name for the workflow.",
+      "type": "string"
+    },
+    "description": {
+      "description": "An optional description for the workflow.",
+      "type": "string"
+    },
     "steps": {
       "description": "An array of actions to perform in sequence.",
       "type": "array",
       "items": {
+        "description": "A single step in the workflow. Can be a simple action or a control structure.",
         "type": "object",
-        "properties": {
-          "action": {
-            "description": "The type of action to perform (e.g., 'click', 'type', 'navigate').",
-            "type": "string"
-          },
-          "selector": {
-            "description": "A CSS selector to target an element for the action.",
-            "type": "string"
-          },
-          "value": {
-            "description": "A value to use with the action (e.g., text to type, URL to navigate to).",
-            "type": "string"
-          },
-          "loop": {
-            "description": "Defines how this step should be looped.",
-            "type": "object",
-            "oneOf": [
-              { "required": ["times"] },
-              { "required": ["items"] }
-            ],
+        "required": ["action"],
+        "oneOf": [
+          {
             "properties": {
-              "times": {
-                "description": "Number of times to repeat the step.",
+              "action": { "const": "wait" },
+              "value": {
+                "description": "Time to wait in milliseconds.",
                 "type": "integer",
-                "minimum": 1
+                "minimum": 0
               },
-              "items": {
-                "description": "An array of items to iterate over, substituting {{item}} in the step.",
-                "type": "array"
-              }
+              "loop": { "$ref": "#/definitions/loop" },
+              "condition": { "$ref": "#/definitions/condition" }
             },
+            "required": ["value"],
             "additionalProperties": false
           },
-          "condition": {
-            "description": "Defines a condition under which this step should execute.",
-            "type": "object",
-            "oneOf": [
-              { "required": ["ifExists"] },
-              { "required": ["ifValue"] }
-            ],
+          {
             "properties": {
-              "ifExists": {
-                "description": "Execute step only if an element matching this selector exists.",
+              "action": { "const": "click" },
+              "selector": {
+                "description": "CSS selector for the element to click.",
                 "type": "string"
               },
-              "ifValue": {
-                "description": "Execute step only if the element's value matches.",
-                "type": "object",
-                "properties": {
-                  "selector": {
-                    "type": "string"
-                  },
-                  "equals": {
-                    "type": "string"
-                  }
-                },
-                "required": ["selector", "equals"],
-                "additionalProperties": false
-              }
+              "value": { "type": "string" },
+              "loop": { "$ref": "#/definitions/loop" },
+              "condition": { "$ref": "#/definitions/condition" }
             },
+            "required": ["selector"],
             "additionalProperties": false
           },
-          "jsHatch": {
-            "description": "An escape hatch to execute arbitrary JavaScript code.",
-            "type": "string"
+          {
+            "properties": {
+              "action": { "const": "type" },
+              "selector": {
+                "description": "CSS selector for the input element.",
+                "type": "string"
+              },
+              "value": {
+                "description": "Text to type into the element.",
+                "type": "string"
+              },
+              "loop": { "$ref": "#/definitions/loop" },
+              "condition": { "$ref": "#/definitions/condition" }
+            },
+            "required": ["selector", "value"],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "action": { "const": "log" },
+              "value": {
+                "description": "Message to log to the console.",
+                "type": "string"
+              },
+              "loop": { "$ref": "#/definitions/loop" },
+              "condition": { "$ref": "#/definitions/condition" }
+            },
+            "required": ["value"],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "action": { "const": "navigate" },
+              "value": {
+                "description": "URL to navigate to.",
+                "type": "string"
+              },
+              "loop": { "$ref": "#/definitions/loop" },
+              "condition": { "$ref": "#/definitions/condition" }
+            },
+            "required": ["value"],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "action": { "const": "jsHatch" },
+              "description": { "type": "string" },
+              "code": {
+                "description": "JavaScript code to execute in the page context.",
+                "type": "string"
+              },
+              "value": { "type": "string" },
+              "selector": { "type": "string" },
+              "loop": { "$ref": "#/definitions/loop" },
+              "condition": { "$ref": "#/definitions/condition" }
+            },
+            "required": ["code"],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "action": { "const": "if" },
+              "condition": { "$ref": "#/definitions/conditionCheck" },
+              "then": {
+                "description": "Steps to execute if the condition is true.",
+                "type": "array",
+                "items": { "$ref": "#/properties/steps/items" }
+              },
+              "else": {
+                "description": "Steps to execute if the condition is false.",
+                "type": "array",
+                "items": { "$ref": "#/properties/steps/items" }
+              },
+              "loop": { "$ref": "#/definitions/loop" }
+            },
+            "required": ["condition", "then"],
+            "additionalProperties": false
+          },
+          {
+            "properties": {
+              "action": { "const": "loop" },
+              "forEach": {
+                "description": "Defines the items or count for iteration.",
+                "type": "object",
+                "oneOf": [
+                  { "required": ["in"] },
+                  { "required": ["times"] }
+                ],
+                "properties": {
+                  "in": {
+                    "description": "An array of items to iterate over.",
+                    "type": "array"
+                  },
+                  "times": {
+                    "description": "Number of times to repeat the steps.",
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "additionalProperties": false
+              },
+              "do": {
+                "description": "Steps to execute for each item or iteration.",
+                "type": "array",
+                "items": { "$ref": "#/properties/steps/items" }
+              },
+              "loop": { "$ref": "#/definitions/loop" },
+              "condition": { "$ref": "#/definitions/condition" }
+            },
+            "required": ["forEach", "do"],
+            "additionalProperties": false
           }
-        },
-        "required": ["action"],
-        "additionalProperties": false
+        ]
       },
       "minItems": 1
     }
   },
   "required": ["steps"],
-  "additionalProperties": false
+  "additionalProperties": false,
+
+  "definitions": {
+    "loop": {
+      "description": "Defines how a step should be looped.",
+      "type": "object",
+      "oneOf": [
+        { "required": ["times"] },
+        { "required": ["items"] }
+      ],
+      "properties": {
+        "times": {
+          "description": "Number of times to repeat the step.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "items": {
+          "description": "An array of items to iterate over, substituting {{item}} in the step.",
+          "type": "array"
+        }
+      },
+      "additionalProperties": false
+    },
+    "condition": {
+      "description": "Defines a condition under which a step should execute.",
+      "type": "object",
+      "oneOf": [
+        { "required": ["ifExists"] },
+        { "required": ["ifValue"] }
+      ],
+      "properties": {
+        "ifExists": {
+          "description": "Execute step only if an element matching this selector exists.",
+          "type": "string"
+        },
+        "ifValue": {
+          "description": "Execute step only if the element's value matches.",
+          "type": "object",
+          "properties": {
+            "selector": { "type": "string" },
+            "equals": { "type": "string" }
+          },
+          "required": ["selector", "equals"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "conditionCheck": {
+        "description": "The condition to evaluate for an 'if' action.",
+        "type": "object",
+        "properties": {
+          "conditionType": {
+            "description": "Type of condition to check (e.g., ifExists, ifValue).",
+            "enum": ["ifExists", "ifValue"]
+          },
+          "selector": { "type": "string" },
+          "equalsValue": { "type": "string" }
+        },
+        "required": ["conditionType"],
+        "additionalProperties": false
+      }
+  }
 } 

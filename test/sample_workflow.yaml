@@ -1,0 +1,84 @@
+name: Sample Workflow Test
+description: A workflow to test sequential steps, conditions, loops, and JS hatches.
+
+steps:
+  - action: log
+    value: Starting the sample workflow.
+
+  - action: type
+    selector: "#input1"
+    value: "Initial text"
+
+  - action: wait
+    value: 500 # ms
+
+  - action: click
+    selector: "#button1"
+
+  - action: wait
+    value: 1000
+
+  # Conditional block - using action: 'if'
+  - action: if
+    condition: # Condition details moved under a 'condition' key
+      conditionType: ifValue
+      selector: "#input2"
+      equalsValue: "proceed"
+    then: # 'if' block renamed to 'then'
+      - action: log
+        value: "Condition met, proceeding..."
+      - action: click
+        selector: "#conditionalButton"
+    else: # 'else' block remains the same
+      - action: log
+        value: "Condition not met, typing 'proceed'..."
+      - action: type
+        selector: "#input2"
+        value: "proceed"
+      - action: wait
+        value: 300
+      - action: click
+        selector: "#conditionalButton"
+
+  - action: wait
+    value: 500
+
+  # Loop block - using action: 'loop'
+  - action: loop
+    forEach: # Loop details moved under a 'forEach' key
+      in: ["Apple", "Banana", "Cherry"]
+    do: # 'do' block remains the same
+      - action: log
+        value: "Processing item: {{item}}"
+      - action: type
+        selector: "#loopInput"
+        value: "Item: {{item}}"
+      - action: click
+        selector: "#loopButton"
+      - action: wait
+        value: 200
+
+  - action: jsHatch
+    description: "Run some custom JS"
+    code: |
+      const element = document.createElement('div');
+      element.textContent = 'Created by JS Hatch!';
+      element.setAttribute('data-test', 'hatch-created');
+      document.body.appendChild(element);
+      return { status: 'ok', timestamp: Date.now() };
+    # storeResultAs: hatchResult
+
+  # Second conditional block - using action: 'if'
+  - action: if
+    condition:
+      conditionType: ifExists
+      selector: "[data-test='hatch-created']"
+    then:
+      - action: log
+        value: "JS Hatch element found!"
+    else:
+      - action: log
+        value: "JS Hatch element NOT found."
+
+  - action: log
+    value: Sample workflow finished.

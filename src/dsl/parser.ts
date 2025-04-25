@@ -13,9 +13,15 @@ const schemaPath = path.join('src', 'dsl', 'schema.json'); // Adjusted path
 const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
 const schema = JSON.parse(schemaContent);
 
-// Define a basic Workflow type based on the schema
-// Consider generating this from the schema for better accuracy/maintenance
-interface StepCondition {
+// --- Type Definitions for Workflow Steps (Discriminated Union) ---
+
+// Reusable definitions matching schema
+interface LoopDefinition {
+    times?: number;
+    items?: any[];
+}
+
+interface ConditionDefinition {
     ifExists?: string;
     ifValue?: {
         selector: string;
@@ -23,56 +29,120 @@ interface StepCondition {
     };
 }
 
-interface StepLoop {
-    times?: number;
-    items?: unknown[]; // Can be any type based on usage
+interface ConditionCheck {
+    conditionType: 'ifExists' | 'ifValue';
+    selector: string;
+    equalsValue?: string;
 }
 
-interface Step {
-    action: string;
-    selector?: string;
-    value?: string;
-    loop?: StepLoop;
-    condition?: StepCondition;
-    jsHatch?: string;
+// Base interface for common properties (optional)
+interface BaseStep {
+    loop?: LoopDefinition;
+    stepCondition?: ConditionDefinition;
 }
 
+// Interfaces for specific action types
+interface LogStep extends BaseStep {
+    action: 'log';
+    value: string;
+}
+
+interface WaitStep extends BaseStep {
+    action: 'wait';
+    value: number; // Changed to number
+}
+
+interface ClickStep extends BaseStep {
+    action: 'click';
+    selector: string;
+    value?: string; // Optional value
+}
+
+interface TypeStep extends BaseStep {
+    action: 'type';
+    selector: string;
+    value: string;
+}
+
+interface NavigateStep extends BaseStep {
+    action: 'navigate'; // Assuming navigate might exist
+    value: string;
+}
+
+interface JsHatchStep extends BaseStep {
+    action: 'jsHatch';
+    code: string;
+    description?: string;
+    value?: any; // Optional value/context for substitution
+    selector?: string; // Optional selector/context
+}
+
+// Interfaces for control flow actions
+interface IfStep extends BaseStep {
+    action: 'if';
+    condition: ConditionCheck;
+    then: Step[];
+    else?: Step[];
+}
+
+interface LoopStep extends BaseStep { // Extends BaseStep for optional inline loop/stepCondition
+    action: 'loop';
+    forEach: { // Corresponds to forEach object in schema
+        in?: any[];
+        times?: number;
+    };
+    do: Step[];
+}
+
+// Export the specific types along with the union type
+export type {
+    LogStep, WaitStep, ClickStep, TypeStep, NavigateStep, JsHatchStep, IfStep, LoopStep,
+    BaseStep, ConditionCheck, ConditionDefinition, LoopDefinition // Also export helper types if needed elsewhere
+};
+
+// The main Step type: a union of all possible step structures
+export type Step = 
+    | LogStep
+    | WaitStep
+    | ClickStep
+    | TypeStep
+    | NavigateStep
+    | JsHatchStep
+    | IfStep
+    | LoopStep;
+
+// Workflow interface using the new Step union type
 export interface Workflow {
+    name?: string;
+    description?: string;
     steps: Step[];
 }
 
+// --- AJV Setup and Validation Function (remains mostly the same) ---
+
 const ajv = new Ajv();
+// Although we defined TS types, validation still uses the JSON schema
 const validate = ajv.compile<Workflow>(schema);
 
 /**
- * Parses a YAML string into a Workflow object and validates it against the schema.
- * Throws an error if parsing or validation fails.
- *
- * @param yamlText The YAML string representing the workflow.
- * @returns The validated Workflow object.
- * @throws Error if YAML is malformed or doesn't match the schema.
+ * Parses YAML and validates against the schema.
  */
 export function loadDslFromYaml(yamlText: string): Workflow {
     let jsonData: unknown;
-
     try {
         jsonData = yaml.load(yamlText);
     } catch (e: unknown) {
-        // Provide more context for YAML parsing errors
         const errorMessage = e instanceof Error ? e.message : 'Unknown YAML parsing error';
         throw new Error(`Failed to parse YAML: ${errorMessage}`);
     }
-
-    // Type guard to ensure jsonData is an object before validation
     if (typeof jsonData !== 'object' || jsonData === null) {
         throw new Error('Parsed YAML is not a valid object.');
     }
-
     if (validate(jsonData)) {
-        // The type cast is safe here because validation passed
+        // Validation passed, cast is safe according to schema
+        // Note: TS types and JSON schema should be kept in sync!
         return jsonData as Workflow;
     } else {
-        // Combine validation errors into a single message
         const errorMessages = validate.errors
             ?.map(err => `Error at path '${err.instancePath}': ${err.message}`)
             .join('\n');

@@ -1,70 +1,196 @@
-// Content script entry point
-console.log('Content script loaded and ready to receive messages');
+/// <reference types="chrome" />
 
-// Inject a test button into the page to trigger a message to the background script
-function injectTestButton() {
-  const btn = document.createElement('button');
-  btn.textContent = 'Send Test Message to Background';
-  btn.style.position = 'fixed';
-  btn.style.bottom = '20px';
-  btn.style.right = '20px';
-  btn.style.zIndex = '99999';
-  btn.style.padding = '10px 16px';
-  btn.style.background = '#222';
-  btn.style.color = '#fff';
-  btn.style.border = 'none';
-  btn.style.borderRadius = '6px';
-  btn.style.cursor = 'pointer';
-  btn.onclick = () => {
-    chrome.runtime.sendMessage({ type: 'EXECUTE_ACTION', action: 'test' }, (response) => {
-      console.log('Response from background:', response);
-      alert('Response from background: ' + JSON.stringify(response));
-    });
-  };
-  document.body.appendChild(btn);
+console.log('[ContentScript] Loaded and ready.');
+
+// --- Define Message Payloads (Mirroring Executor) ---
+interface ExecuteActionPayload {
+    action: string;
+    selector?: string;
+    value?: string;
 }
 
-injectTestButton();
+interface CheckConditionPayload {
+    conditionType: 'ifExists' | 'ifValue';
+    selector: string;
+    equalsValue?: string;
+}
 
-// Listen for messages from the extension
+interface ExecuteJsHatchPayload {
+    code: string;
+}
+
+// --- Helper Functions ---
+
+/** Clicks an element specified by a selector */
+async function clickElement(selector: string): Promise<void> {
+    console.log(`[ContentScript] Clicking element: ${selector}`);
+    const element = document.querySelector(selector);
+    if (element && element instanceof HTMLElement) {
+        element.click();
+    } else {
+        throw new Error(`Element not found or not clickable for selector: ${selector}`);
+    }
+}
+
+/** Types text into an input element specified by a selector */
+async function typeText(selector: string, text: string): Promise<void> {
+    console.log(`[ContentScript] Typing into element: ${selector}`);
+    const element = document.querySelector(selector);
+    if (element && (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement)) {
+        element.value = text;
+        // Dispatch events to simulate user input if needed by the page
+        element.dispatchEvent(new Event('input', { bubbles: true }));
+        element.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+        throw new Error(`Element not found or not an input/textarea for selector: ${selector}`);
+    }
+}
+
+/** Navigates the current page to a new URL */
+async function navigatePage(url: string): Promise<void> {
+    console.log(`[ContentScript] Navigating to: ${url}`);
+    window.location.href = url;
+    // Note: This will cause the content script to reload on the new page.
+    // No further actions in the *current* script execution context will run after navigation.
+}
+
+/** Waits for a specified duration */
+async function wait(durationMs: number): Promise<void> {
+    console.log(`[ContentScript] Waiting for ${durationMs}ms`);
+    return new Promise(resolve => setTimeout(resolve, durationMs));
+}
+
+/** Checks if an element exists or matches a value condition */
+async function checkCondition(payload: CheckConditionPayload): Promise<{ conditionMet: boolean }> {
+    const { conditionType, selector, equalsValue } = payload;
+    console.log(`[ContentScript] Checking condition ${conditionType} for selector: ${selector}`);
+    const element = document.querySelector(selector);
+
+    if (conditionType === 'ifExists') {
+        const met = !!element;
+        console.log(`[ContentScript] Condition ifExists result: ${met}`);
+        return { conditionMet: met };
+    }
+
+    if (conditionType === 'ifValue') {
+        if (!element) {
+            console.log(`[ContentScript] Condition ifValue failed: Element not found.`);
+            return { conditionMet: false }; // Element doesn't exist, so value can't match
+        }
+        let elementValue: string | null = null;
+        if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+            elementValue = element.value;
+        } else {
+            // Fallback for other elements (e.g., divs, spans) - might need adjustment
+            elementValue = element.textContent;
+        }
+        const met = elementValue === equalsValue;
+        console.log(`[ContentScript] Condition ifValue check: elementValue="${elementValue}", equalsValue="${equalsValue}", result: ${met}`);
+        return { conditionMet: met };
+    }
+
+    throw new Error(`Unknown condition type: ${conditionType}`);
+}
+
+/** Executes arbitrary JavaScript code in the page context */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function executeJsHatch(code: string): Promise<any> {
+    console.log(`[ContentScript] Executing jsHatch`);
+    try {
+        // Using Function constructor for slightly safer execution than eval
+        const func = new Function(code);
+        const result = await Promise.resolve(func()); // Allow hatch to be async
+        console.log(`[ContentScript] jsHatch result:`, result);
+        return result;
+    } catch (error: unknown) {
+        console.error('[ContentScript] Error executing jsHatch:', error);
+        throw new Error(`jsHatch execution failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+// --- Message Listener ---
+
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  console.log('Content script received message:', request);
-  
-  // Handle the message
-  if (request.type === 'EXECUTE_ACTION') {
-    console.log('Executing action:', request.action);
-    sendResponse({ success: true, message: `Content script received action: ${request.action}` });
-  } else {
-    console.log('Unknown message type:', request.type);
-    sendResponse({ success: false, error: `Unknown message type: ${request.type}` });
-  }
-  
-  return true; // Keep the message channel open for async response
+    console.log('[ContentScript] Received message:', request);
+
+    // Validate request structure
+     if (!request || typeof request.type !== 'string') {
+         console.error('[ContentScript] Invalid message structure received:', request);
+         sendResponse({ success: false, error: 'Invalid message structure' });
+         return false; // No async response needed
+     }
+
+    // Use an async IIFE to handle the promise-based actions
+    (async () => {
+        try {
+            switch (request.type) {
+                case 'EXECUTE_ACTION': {
+                    const payload = request.payload as ExecuteActionPayload;
+                    if (!payload || typeof payload.action !== 'string') {
+                        throw new Error('Invalid EXECUTE_ACTION payload');
+                    }
+                    const { action, selector, value } = payload;
+                    switch (action) {
+                        case 'click':
+                            if (!selector) throw new Error('Missing selector for click action');
+                            await clickElement(selector);
+                            break;
+                        case 'type':
+                            if (!selector || typeof value === 'undefined') throw new Error('Missing selector or value for type action');
+                            await typeText(selector, value);
+                            break;
+                        case 'navigate':
+                            if (typeof value === 'undefined') throw new Error('Missing value (URL) for navigate action');
+                            await navigatePage(value);
+                            // Script halts here due to navigation, sendResponse might not happen
+                            // It's okay for navigate, executor shouldn't necessarily expect a response.
+                            return; // Exit IIFE early
+                        case 'wait':
+                             const duration = parseInt(value || '0', 10);
+                             if (isNaN(duration) || duration < 0) throw new Error('Invalid duration for wait action');
+                             await wait(duration);
+                             break;
+                        case 'log':
+                            console.log('[Workflow Log]:', value); // Log action
+                            break;
+                        default:
+                            throw new Error(`Unknown action: ${action}`);
+                    }
+                    sendResponse({ success: true });
+                    break;
+                }
+                case 'CHECK_CONDITION': {
+                    const payload = request.payload as CheckConditionPayload;
+                     if (!payload || typeof payload.conditionType !== 'string' || typeof payload.selector !== 'string') {
+                         throw new Error('Invalid CHECK_CONDITION payload');
+                     }
+                    const result = await checkCondition(payload);
+                    sendResponse({ success: true, data: result });
+                    break;
+                }
+                case 'EXECUTE_JS_HATCH': {
+                     const payload = request.payload as ExecuteJsHatchPayload;
+                     if (!payload || typeof payload.code !== 'string') {
+                         throw new Error('Invalid EXECUTE_JS_HATCH payload');
+                     }
+                    const result = await executeJsHatch(payload.code);
+                    sendResponse({ success: true, data: result });
+                    break;
+                }
+                default:
+                    console.warn('[ContentScript] Unknown message type:', request.type);
+                    sendResponse({ success: false, error: `Unknown message type: ${request.type}` });
+            }
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error('[ContentScript] Error handling message:', request.type, error);
+            sendResponse({ success: false, error: errorMessage });
+        }
+    })(); // Immediately invoke the async function
+
+    return true; // Return true to indicate asynchronous response handling
 });
 
-// Export content script API
-export const contentScriptAPI = {
-  click: (selector: string) => {
-    const element = document.querySelector(selector);
-    if (element) {
-      (element as HTMLElement).click();
-      return true;
-    }
-    return false;
-  },
+console.log('[ContentScript] Message listener added.');
 
-  type: (selector: string, text: string) => {
-    const element = document.querySelector(selector);
-    if (element && element instanceof HTMLInputElement) {
-      element.value = text;
-      element.dispatchEvent(new Event('input', { bubbles: true }));
-      return true;
-    }
-    return false;
-  },
-
-  navigate: (url: string) => {
-    window.location.href = url;
-    return true;
-  },
-}; 
+// Removed old test button and exports 
