@@ -68,8 +68,8 @@
 ## 📝 Phase 3: JSON/YAML DSL Engine  
 - [x] Define DSL JSON Schema (steps, loops, conditionals, `jsHatch`)  
 - [x] Integrate YAML parser + schema validator  
-- [ ] Implement DSL executor to call content-script APIs  
-- [ ] End-to-end test: sample DSL runs on a demo page  
+- [x] Implement DSL executor to call content-script APIs  
+- [x] End-to-end test: sample DSL runs on a demo page  
 
 ## 🔐 Phase 4: Session & Auth  
 - [ ] Credential vault in `chrome.storage` (encrypted)  
@@ -100,7 +100,7 @@
 - [ ] Example plugin: inject header on `example.com`  
 
 ## 🎨 Phase 9: UX & Options  
-- [ ] Popup UI: prompt entry, run button, status  
+- [x] Popup UI: prompt entry, run button, status  
 - [ ] Options page: model selector, retry count, DSL editor, recipe library  
 - [ ] Test: change settings → behaviors update  
 

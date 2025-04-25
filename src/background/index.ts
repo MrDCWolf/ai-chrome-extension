@@ -34,6 +34,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     });
     
     return true; // Keep the message channel open for async response
+  } else if (message.type === 'RUN_WORKFLOW') {
+    console.log('Received RUN_WORKFLOW command with prompt:', message.prompt);
+    // Placeholder for actual workflow execution logic
+    // For now, just acknowledge receipt
+    sendResponse({ success: true, message: 'Workflow run initiated with prompt.', prompt: message.prompt });
+    return false; // No async response needed for now
   }
   
   console.warn('Unknown message type:', message.type);
